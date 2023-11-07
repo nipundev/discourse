@@ -1,17 +1,21 @@
 import { schedule } from "@ember/runloop";
 import { hbs } from "ember-cli-htmlbars";
+import $ from "jquery";
 import { h } from "virtual-dom";
 import { addExtraUserClasses } from "discourse/helpers/user-avatar";
 import { wantsNewWindow } from "discourse/lib/intercept-click";
+import scrollLock from "discourse/lib/scroll-lock";
 import { logSearchLinkClick } from "discourse/lib/search";
 import DiscourseURL from "discourse/lib/url";
 import { scrollTop } from "discourse/mixins/scroll-top";
 import { avatarImg } from "discourse/widgets/post";
 import RenderGlimmer from "discourse/widgets/render-glimmer";
 import { createWidget } from "discourse/widgets/widget";
+import { isTesting } from "discourse-common/config/environment";
 import getURL from "discourse-common/lib/get-url";
 import { iconNode } from "discourse-common/lib/icon-library";
-import I18n from "I18n";
+import discourseLater from "discourse-common/lib/later";
+import I18n from "discourse-i18n";
 
 const SEARCH_BUTTON_ID = "search-button";
 
@@ -347,8 +351,38 @@ createWidget("revamped-hamburger-menu-wrapper", {
     }
   },
 
-  clickOutside() {
-    this.sendWidgetAction("toggleHamburger");
+  clickOutside(e) {
+    if (
+      e.target.classList.contains("header-cloak") &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      const panel = document.querySelector(".menu-panel");
+      const headerCloak = document.querySelector(".header-cloak");
+      const finishPosition =
+        document.querySelector("html").classList["direction"] === "rtl"
+          ? "340px"
+          : "-340px";
+      panel
+        .animate([{ transform: `translate3d(${finishPosition}, 0, 0)` }], {
+          duration: 200,
+          fill: "forwards",
+          easing: "ease-in",
+        })
+        .finished.then(() => {
+          if (isTesting()) {
+            this.sendWidgetAction("toggleHamburger");
+          } else {
+            discourseLater(() => this.sendWidgetAction("toggleHamburger"));
+          }
+        });
+      headerCloak.animate([{ opacity: 0 }], {
+        duration: 200,
+        fill: "forwards",
+        easing: "ease-in",
+      });
+    } else {
+      this.sendWidgetAction("toggleHamburger");
+    }
   },
 });
 
@@ -374,8 +408,38 @@ createWidget("revamped-user-menu-wrapper", {
     this.sendWidgetAction("toggleUserMenu");
   },
 
-  clickOutside() {
-    this.closeUserMenu();
+  clickOutside(e) {
+    if (
+      e.target.classList.contains("header-cloak") &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      const panel = document.querySelector(".menu-panel");
+      const headerCloak = document.querySelector(".header-cloak");
+      const finishPosition =
+        document.querySelector("html").classList["direction"] === "rtl"
+          ? "-340px"
+          : "340px";
+      panel
+        .animate([{ transform: `translate3d(${finishPosition}, 0, 0)` }], {
+          duration: 200,
+          fill: "forwards",
+          easing: "ease-in",
+        })
+        .finished.then(() => {
+          if (isTesting) {
+            this.closeUserMenu();
+          } else {
+            discourseLater(() => this.closeUserMenu());
+          }
+        });
+      headerCloak.animate([{ opacity: 0 }], {
+        duration: 200,
+        fill: "forwards",
+        easing: "ease-in",
+      });
+    } else {
+      this.closeUserMenu();
+    }
   },
 });
 
@@ -600,44 +664,7 @@ export default createWidget("header", {
     if (!this.site.mobileView) {
       return;
     }
-    if (bool) {
-      document.body.addEventListener("touchmove", this.preventDefault, {
-        passive: false,
-      });
-    } else {
-      document.body.removeEventListener("touchmove", this.preventDefault, {
-        passive: false,
-      });
-    }
-  },
-
-  preventDefault(e) {
-    const windowHeight = window.innerHeight;
-
-    // allow profile menu tabs to scroll if they're taller than the window
-    if (e.target.closest(".menu-panel .menu-tabs-container")) {
-      const topTabs = document.querySelector(".menu-panel .top-tabs");
-      const bottomTabs = document.querySelector(".menu-panel .bottom-tabs");
-      const profileTabsHeight =
-        topTabs?.offsetHeight + bottomTabs?.offsetHeight || 0;
-
-      if (profileTabsHeight > windowHeight) {
-        return;
-      }
-    }
-
-    // allow menu panels to scroll if contents are taller than the window
-    if (e.target.closest(".menu-panel")) {
-      const menuContentHeight =
-        document.querySelector(".menu-panel .panel-body-contents")
-          .offsetHeight || 0;
-
-      if (menuContentHeight > windowHeight) {
-        return;
-      }
-    }
-
-    e.preventDefault();
+    scrollLock(bool);
   },
 
   togglePageSearch() {

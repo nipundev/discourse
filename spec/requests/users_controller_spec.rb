@@ -607,6 +607,7 @@ RSpec.describe UsersController do
       user = sign_in(Fabricate(:user))
       user.trust_level = 1
       user.save!
+      Group.refresh_automatic_groups!
 
       post "/u/toggle-anon.json"
       expect(response.status).to eq(200)
@@ -4149,6 +4150,24 @@ RSpec.describe UsersController do
 
       expect(json["user_summary"]["topic_count"]).to eq(1)
       expect(json["user_summary"]["post_count"]).to eq(0)
+    end
+
+    context "when `hide_user_profiles_from_public` site setting is enabled" do
+      before { SiteSetting.hide_user_profiles_from_public = true }
+
+      it "returns 200 for logged in users" do
+        sign_in(Fabricate(:user))
+
+        get "/u/#{user.username_lower}/summary.json"
+
+        expect(response.status).to eq(200)
+      end
+
+      it "returns 403 for anonymous users" do
+        get "/u/#{user.username_lower}/summary.json"
+
+        expect(response.status).to eq(403)
+      end
     end
 
     context "when `hide_profile_and_presence` user option is checked" do

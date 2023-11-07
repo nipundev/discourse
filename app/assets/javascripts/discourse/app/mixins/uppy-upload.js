@@ -21,7 +21,7 @@ import UppyS3Multipart from "discourse/mixins/uppy-s3-multipart";
 import getUrl from "discourse-common/lib/get-url";
 import { deepMerge } from "discourse-common/lib/object";
 import { bind, on } from "discourse-common/utils/decorators";
-import I18n from "I18n";
+import I18n from "discourse-i18n";
 
 export const HUGE_FILE_THRESHOLD_BYTES = 104_857_600; // 100MB
 
@@ -45,6 +45,17 @@ export default Mixin.create(UppyS3Multipart, ExtendableUploader, {
 
   validateUploadedFilesOptions() {
     return {};
+  },
+
+  /**
+   * Overridable for custom file validations, executed before uploading.
+   *
+   * @param {object} file
+   *
+   * @returns {boolean}
+   */
+  isUploadedFileAllowed() {
+    return true;
   },
 
   uploadingOrProcessing: or("uploading", "processing"),
@@ -112,7 +123,9 @@ export default Mixin.create(UppyS3Multipart, ExtendableUploader, {
           },
           this.validateUploadedFilesOptions()
         );
-        const isValid = validateUploadedFile(currentFile, validationOpts);
+        const isValid =
+          validateUploadedFile(currentFile, validationOpts) &&
+          this.isUploadedFileAllowed(currentFile);
         this.setProperties({
           uploadProgress: 0,
           uploading: isValid && this.autoStartUploads,

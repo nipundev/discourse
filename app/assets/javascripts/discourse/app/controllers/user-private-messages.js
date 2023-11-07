@@ -4,7 +4,7 @@ import { action } from "@ember/object";
 import { alias, and, equal, readOnly } from "@ember/object/computed";
 import { inject as service } from "@ember/service";
 import DiscourseURL from "discourse/lib/url";
-import I18n from "I18n";
+import I18n from "discourse-i18n";
 
 const customUserNavMessagesDropdownRows = [];
 
@@ -27,6 +27,7 @@ export function resetCustomUserNavMessagesDropdownRows() {
 export default class extends Controller {
   @service router;
   @controller user;
+  @controller userTopicsList;
 
   @tracked group;
   @tracked tagId;
@@ -37,6 +38,10 @@ export default class extends Controller {
   @readOnly("user.viewingSelf") viewingSelf;
   @readOnly("router.currentRoute.parent.name") currentParentRouteName;
   @readOnly("site.can_tag_pms") pmTaggingEnabled;
+
+  get bulkSelectHelper() {
+    this.userTopicsList.bulkSelectHelper;
+  }
 
   get messagesDropdownValue() {
     let value;

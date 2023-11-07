@@ -100,6 +100,14 @@ Discourse::Application.routes.draw do
     get "wizard/steps/:id" => "wizard#index"
     put "wizard/steps/:id" => "steps#update"
 
+    namespace :admin_revamp,
+              path: "admin-revamp",
+              module: "admin",
+              constraints: StaffConstraint.new do
+      get "" => "admin#index"
+      get "config/:area" => "admin#index"
+    end
+
     namespace :admin, constraints: StaffConstraint.new do
       get "" => "admin#index"
 
@@ -1017,7 +1025,6 @@ Discourse::Application.routes.draw do
     get "posts/by-date/:topic_id/:date" => "posts#by_date"
     get "posts/:id/reply-history" => "posts#reply_history"
     get "posts/:id/reply-ids" => "posts#reply_ids"
-    get "posts/:id/reply-ids/all" => "posts#all_reply_ids"
     get "posts/:username/deleted" => "posts#deleted_posts",
         :constraints => {
           username: RouteFormat.username,
@@ -1155,6 +1162,7 @@ Discourse::Application.routes.draw do
 
     resources :categories, except: %i[show new edit]
     post "categories/reorder" => "categories#reorder"
+    get "categories/search" => "categories#search"
 
     scope path: "category/:category_id" do
       post "/move" => "categories#move"
@@ -1461,11 +1469,6 @@ Discourse::Application.routes.draw do
         :constraints => {
           format: /.*/,
         }
-    get "brotli_asset/*path" => "static#brotli_asset",
-        :format => false,
-        :constraints => {
-          format: /.*/,
-        }
 
     get "favicon/proxied" => "static#favicon", :format => false
 
@@ -1599,7 +1602,6 @@ Discourse::Application.routes.draw do
     delete "user-status" => "user_status#clear"
 
     resources :sidebar_sections, only: %i[index create update destroy]
-    post "/sidebar_sections/reorder" => "sidebar_sections#reorder"
     put "/sidebar_sections/reset/:id" => "sidebar_sections#reset"
 
     get "*url", to: "permalinks#show", constraints: PermalinkConstraint.new

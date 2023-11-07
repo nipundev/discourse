@@ -5,7 +5,7 @@ import Bookmark from "discourse/models/bookmark";
 import User from "discourse/models/user";
 import { getOwnerWithFallback } from "discourse-common/lib/get-owner";
 import discourseLater from "discourse-common/lib/later";
-import I18n from "I18n";
+import I18n from "discourse-i18n";
 import transformAutolinks from "discourse/plugins/chat/discourse/lib/transform-auto-links";
 import ChatMessageReaction from "discourse/plugins/chat/discourse/models/chat-message-reaction";
 
@@ -26,6 +26,7 @@ export default class ChatMessage {
   @tracked selected;
   @tracked channel;
   @tracked staged;
+  @tracked processed = true;
   @tracked draftSaved;
   @tracked draft;
   @tracked createdAt;
@@ -64,6 +65,7 @@ export default class ChatMessage {
     this.draftSaved = args.draftSaved || args.draft_saved || false;
     this.firstOfResults = args.firstOfResults || args.first_of_results || false;
     this.staged = args.staged || false;
+    this.processed = args.processed || true;
     this.edited = args.edited || false;
     this.editing = args.editing || false;
     this.availableFlags = args.availableFlags || args.available_flags;

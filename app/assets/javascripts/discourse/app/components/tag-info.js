@@ -7,7 +7,7 @@ import { isEmpty } from "@ember/utils";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import discourseComputed from "discourse-common/utils/decorators";
-import I18n from "I18n";
+import I18n from "discourse-i18n";
 
 export default Component.extend({
   dialog: service(),
@@ -140,8 +140,35 @@ export default Component.extend({
         .catch(popupAjaxError);
     },
 
+    @action
     deleteTag() {
-      this.deleteAction(this.tagInfo);
+      const numTopics =
+        this.get("list.topic_list.tags.firstObject.topic_count") || 0;
+
+      let confirmText =
+        numTopics === 0
+          ? I18n.t("tagging.delete_confirm_no_topics")
+          : I18n.t("tagging.delete_confirm", { count: numTopics });
+
+      if (this.tagInfo.synonyms.length > 0) {
+        confirmText +=
+          " " +
+          I18n.t("tagging.delete_confirm_synonyms", {
+            count: this.tagInfo.synonyms.length,
+          });
+      }
+
+      this.dialog.deleteConfirm({
+        message: confirmText,
+        didConfirm: async () => {
+          try {
+            await this.tag.destroyRecord();
+            this.router.transitionTo("tags.index");
+          } catch {
+            this.dialog.alert(I18n.t("generic_error"));
+          }
+        },
+      });
     },
 
     addSynonyms() {
