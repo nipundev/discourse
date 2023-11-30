@@ -9,6 +9,8 @@ import DToggleSwitch from "discourse/components/d-toggle-switch";
 import categoryBadge from "discourse/helpers/category-badge";
 import replaceEmoji from "discourse/helpers/replace-emoji";
 import { popupAjaxError } from "discourse/lib/ajax-error";
+import icon from "discourse-common/helpers/d-icon";
+import i18n from "discourse-common/helpers/i18n";
 import I18n from "discourse-i18n";
 import ComboBox from "select-kit/components/combo-box";
 import ChatForm from "discourse/plugins/chat/discourse/components/chat/form";
@@ -29,12 +31,14 @@ const NOTIFICATION_LEVELS = [
 export default class ChatAboutScreen extends Component {
   @service chatApi;
   @service chatGuardian;
+  @service chatChannelsManager;
   @service currentUser;
   @service siteSettings;
   @service dialog;
   @service modal;
   @service site;
   @service toasts;
+  @service router;
 
   notificationLevels = NOTIFICATION_LEVELS;
 
@@ -66,7 +70,21 @@ export default class ChatAboutScreen extends Component {
   );
 
   get canEditChannel() {
-    return this.chatGuardian.canEditChatChannel();
+    if (
+      this.args.channel.isCategoryChannel &&
+      this.chatGuardian.canEditChatChannel()
+    ) {
+      return true;
+    }
+
+    if (
+      this.args.channel.isDirectMessageChannel &&
+      this.args.channel.chatable.group
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   get shouldRenderDescriptionSection() {
@@ -293,6 +311,12 @@ export default class ChatAboutScreen extends Component {
     return this.modal.show(ChatModalEditChannelName, {
       model: this.args.channel,
     });
+  }
+
+  @action
+  onLeaveChannel(channel) {
+    this.chatChannelsManager.remove(channel);
+    return this.router.transitionTo("chat");
   }
 
   @action
@@ -559,6 +583,7 @@ export default class ChatAboutScreen extends Component {
             <:action>
               <ToggleChannelMembershipButton
                 @channel={{@channel}}
+                @onLeave={{this.onLeaveChannel}}
                 @options={{hash
                   joinClass="btn-primary"
                   leaveClass="btn-danger"
@@ -568,7 +593,14 @@ export default class ChatAboutScreen extends Component {
               />
             </:action>
           </section.row>
+          {{#unless @channel.isCategoryChannel}}
+            <div class="chat-channel-settings__leave-info">
+              {{icon "exclamation-triangle"}}
+              {{i18n "chat.channel_settings.leave_groupchat_info"}}
+            </div>
+          {{/unless}}
         </form.section>
+
       </ChatForm>
     </div>
   </template>

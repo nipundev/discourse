@@ -18,6 +18,11 @@ import {
 } from "discourse/components/reviewable-item";
 import { addAdvancedSearchOptions } from "discourse/components/search-advanced-options";
 import { addSearchSuggestion as addGlimmerSearchSuggestion } from "discourse/components/search-menu/results/assistant";
+import {
+  addQuickSearchRandomTip,
+  removeDefaultQuickSearchRandomTips,
+} from "discourse/components/search-menu/results/random-quick-tip";
+import { addOnKeyUpCallback } from "discourse/components/search-menu/search-term";
 import { REFRESH_COUNTS_APP_EVENT_NAME as REFRESH_USER_SIDEBAR_CATEGORIES_SECTION_COUNTS_APP_EVENT_NAME } from "discourse/components/sidebar/user/categories-section";
 import { addTopicTitleDecorator } from "discourse/components/topic-title";
 import { addUserMenuProfileTabItem } from "discourse/components/user-menu/profile-tab-content";
@@ -107,9 +112,9 @@ import {
 import { disableNameSuppression } from "discourse/widgets/poster-name";
 import { addOnKeyDownCallback } from "discourse/widgets/search-menu";
 import {
-  addQuickSearchRandomTip,
+  addQuickSearchRandomTip as addWidgetQuickSearchRandomTip,
   addSearchSuggestion,
-  removeDefaultQuickSearchRandomTips,
+  removeDefaultQuickSearchRandomTips as removeWidgetDefaultQuickSearchRandomTips,
 } from "discourse/widgets/search-menu-results";
 import { addTopicParticipantClassesCallback } from "discourse/widgets/topic-map";
 import {
@@ -136,7 +141,7 @@ import { modifySelectKit } from "select-kit/mixins/plugin-api";
 // docs/CHANGELOG-JAVASCRIPT-PLUGIN-API.md whenever you change the version
 // using the format described at https://keepachangelog.com/en/1.0.0/.
 
-export const PLUGIN_API_VERSION = "1.15.0";
+export const PLUGIN_API_VERSION = "1.16.0";
 
 // This helper prevents us from applying the same `modifyClass` over and over in test mode.
 function canModify(klass, type, resolverName, changes) {
@@ -1654,8 +1659,17 @@ class PluginApi {
    * });
    * ```
    *
+   * @deprecated because modifying an Ember-rendered DOM tree can lead to very unexpected errors. Use plugin outlet connectors instead
    **/
   decorateTopicTitle(callback) {
+    deprecated(
+      "decorateTopicTitle is deprecated because modifying an Ember-rendered DOM tree can lead to very unexpected errors. Use plugin outlet connectors instead",
+      {
+        id: "discourse.decorate-topic-title",
+        since: "3.2",
+        dropFrom: "3.3",
+      }
+    );
     addTopicTitleDecorator(callback);
   }
 
@@ -1821,7 +1835,7 @@ class PluginApi {
   }
 
   /**
-   * Download calendar modal which allow to pick between ICS and Google Calendar
+   * Download calendar modal which allow to pick between ICS and Google Calendar. Optionally, recurrence rule can be specified - https://datatracker.ietf.org/doc/html/rfc5545#section-3.3.10
    *
    * ```
    * api.downloadCalendar("title of the event", [
@@ -1829,12 +1843,14 @@ class PluginApi {
         startsAt: "2021-10-12T15:00:00.000Z",
         endsAt: "2021-10-12T16:00:00.000Z",
       },
-   * ]);
+   * ],
+   * "FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR"
+   * );
    * ```
    *
    */
-  downloadCalendar(title, dates) {
-    downloadCalendar(title, dates);
+  downloadCalendar(title, dates, recurrenceRule = null) {
+    downloadCalendar(title, dates, recurrenceRule);
   }
 
   /**
@@ -1854,6 +1870,7 @@ class PluginApi {
    */
   addSearchMenuOnKeyDownCallback(fn) {
     addOnKeyDownCallback(fn);
+    addOnKeyUpCallback(fn);
   }
 
   /**
@@ -1873,6 +1890,7 @@ class PluginApi {
    */
   addQuickSearchRandomTip(tip) {
     addQuickSearchRandomTip(tip);
+    addWidgetQuickSearchRandomTip(tip);
   }
 
   /**
@@ -1884,8 +1902,9 @@ class PluginApi {
    * ```
    *
    */
-  removeDefaultQuickSearchRandomTips(tip) {
-    removeDefaultQuickSearchRandomTips(tip);
+  removeDefaultQuickSearchRandomTips() {
+    removeDefaultQuickSearchRandomTips();
+    removeWidgetDefaultQuickSearchRandomTips();
   }
 
   /**
